@@ -300,3 +300,12 @@ main { padding: 0 16px; max-width: 640px; margin: 0 auto; }
 .answer-in { width: 100%; padding: 12px 14px; border-radius: 18px; font: inherit; font-size: 19px; color: #fff; background: rgba(10, 6, 28, .45); border: 1.5px solid rgba(255, 255, 255, .25); resize: none; outline: none; }
 .answer-in:focus { border-color: #c6f432; }
 .ai-fb p { font-size: 17px; }
+
+.why-txt { font-size: 16px; line-height: 1.45; color: rgba(255, 255, 255, .9); padding: 10px 12px; border-radius: 14px; background: rgba(198, 244, 50, .08); border: 1px solid rgba(198, 244, 50, .22); }
+.ai-why-btn { justify-self: start; padding: 9px 14px; border-radius: 99px; font-size: 15px; font-weight: 650; color: #fff; background: var(--grad-ask); }
+.ai-why-btn:disabled { opacity: .7; }
+.ai-why { display: grid; gap: 6px; padding: 12px; border-radius: 14px; background: rgba(124, 140, 255, .12); border: 1px solid rgba(124, 140, 255, .3); }
+.ai-why p { font-size: 16px; line-height: 1.45; }
+.ww { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 18px; }
+.bad-s { color: #ffb4a3; font-weight: 700; }
+.ww-tip { font-size: 14px; color: var(--muted); }
