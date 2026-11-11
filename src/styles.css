@@ -225,6 +225,31 @@ main { padding: 0 16px; max-width: 640px; margin: 0 auto; }
 .sec h2 em { font-style: normal; float: right; color: var(--dim); letter-spacing: .04em; }
 .ask-err small { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); word-break: break-word; }
 
-/* кнопка звука: грузится — мигает, играет — светится */
-.say.load { animation: blink 1s infinite; }
-.say.play { background: rgba(198, 244, 50, .18); }
+
+/* ===== кнопка «Озвучка» ===== */
+.say { position: relative; flex: 0 0 auto; width: auto; min-width: 58px; height: auto; display: grid; justify-items: center; gap: 3px; padding: 6px 6px 5px; border-radius: 16px; font-size: inherit; color: #dfe4ff; transition: transform .12s ease, background .2s; }
+.say:active { transform: scale(.88); }
+.say-ic { position: relative; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: rgba(124, 140, 255, .16); border: 1px solid rgba(124, 140, 255, .35); transition: background .2s, border-color .2s, box-shadow .2s; }
+.say small { font-size: 10.5px; font-weight: 700; line-height: 1; letter-spacing: .02em; color: var(--muted); white-space: nowrap; }
+.say.load .say-ic { background: rgba(124, 140, 255, .1); }
+.say.play .say-ic { color: #0b1030; background: var(--lime); border-color: var(--lime); box-shadow: 0 0 0 4px rgba(198, 244, 50, .18), 0 0 18px rgba(198, 244, 50, .45); }
+.say.play small { color: var(--lime); }
+.say.err .say-ic { animation: shake .35s; border-color: var(--no); }
+/* волна от нажатия */
+.say-ripple { position: absolute; inset: -1px; border-radius: 50%; border: 2px solid var(--indigo); animation: ripple .55s ease-out forwards; pointer-events: none; }
+@keyframes ripple { from { transform: scale(.9); opacity: .9; } to { transform: scale(1.75); opacity: 0; } }
+/* кольцо загрузки */
+.say-spin { position: absolute; inset: -3px; border-radius: 50%; border: 3px solid transparent; border-top-color: var(--indigo); border-right-color: var(--pink); animation: spin .7s linear infinite; pointer-events: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* полоски, пока звучит */
+.bars { display: flex; align-items: center; gap: 2.5px; height: 18px; }
+.bars i { width: 3px; border-radius: 2px; background: currentColor; animation: bar .8s ease-in-out infinite; }
+.bars i:nth-child(1) { height: 8px; animation-delay: 0s; }
+.bars i:nth-child(2) { height: 16px; animation-delay: .15s; }
+.bars i:nth-child(3) { height: 11px; animation-delay: .3s; }
+.bars i:nth-child(4) { height: 14px; animation-delay: .45s; }
+@keyframes bar { 0%, 100% { transform: scaleY(.45); } 50% { transform: scaleY(1); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+/* в строке слова — место под новую кнопку */
+.word-main { grid-template-columns: 1fr auto auto; gap: 6px; }
+.wod-row .say, .cards-say .say { margin-left: 4px; }

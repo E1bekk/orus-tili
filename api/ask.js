@@ -92,7 +92,7 @@ ${answerLang}
 async function callGemini(model, system, contents) {
   const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
-    signal: AbortSignal.timeout(25000),
+    signal: AbortSignal.timeout(12000),
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
@@ -114,42 +114,98 @@ async function callGemini(model, system, contents) {
 // Проверка настроек: открыть в браузере /api/ask?check=1.
 // Ключи не показывает — только «есть / нет» и что ответил Google.
 let lastCheck = 0, lastResult = null;
+let good = null;            // какая модель ответила последней
 async function check() {
   if (Date.now() - lastCheck < 20000 && lastResult) return lastResult;   // не чаще раза в 20 секунд
   const out = {
+    версия: 'Gemini + Groq, 3',
     BOT_TOKEN: process.env.BOT_TOKEN ? (/^\d{6,12}:[A-Za-z0-9_-]{30,}$/.test(String(process.env.BOT_TOKEN).trim()) ? 'есть' : 'есть, но не похож на токен бота') : 'НЕТ',
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY ? 'есть' : 'НЕТ',
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY ? 'есть' : 'нет',
+    GROQ_API_KEY: process.env.GROQ_API_KEY ? 'есть (запасной ИИ)' : 'нет — запасного ИИ нет',
     ALLOWED_IDS: ALLOWED.length ? `${ALLOWED.length} номер(а)` : 'не задано — пускаем всех из Telegram',
     модели: {}
   };
-  if (process.env.GEMINI_API_KEY) {
-    for (const m of MODELS) {
-      try {
-        const text = await callGemini(m, 'Отвечай одним словом.', [{ role: 'user', parts: [{ text: 'Скажи по-русски: привет' }] }]);
-        out.модели[m] = 'работает: ' + text.slice(0, 40);
-        break;                                     // первая рабочая найдена — остальные не трогаем
-      } catch (e) {
-        out.модели[m] = `ошибка ${e.status || ''}: ${String(e.message).slice(0, 160)}`;
-      }
+  // от какого бота токен — должен совпадать с ботом, из которого открывают приложение
+  if (process.env.BOT_TOKEN) {
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${String(process.env.BOT_TOKEN).trim()}/getMe`, { signal: AbortSignal.timeout(6000) });
+      const j = await r.json();
+      out.бот = j.ok ? '@' + j.result.username + ' — приложение должно открываться именно из этого бота' : 'Telegram не признал токен: ' + (j.description || r.status);
+    } catch (e) { out.бот = 'не удалось спросить Telegram'; }
+  }
+  for (const p of providers()) {
+    try {
+      const text = await p.run('Отвечай одним словом.', [{ role: 'user', parts: [{ text: 'Скажи по-русски: привет' }] }]);
+      out.модели[p.name] = 'работает: ' + text.slice(0, 40);
+    } catch (e) {
+      out.модели[p.name] = `ошибка ${e.status || ''}: ${String(e.message).slice(0, 160)}`;
     }
   }
   const okModel = Object.values(out.модели).some(v => v.startsWith('работает'));
   out.итог = out.BOT_TOKEN !== 'есть' ? 'Проблема с BOT_TOKEN'
-    : out.GEMINI_API_KEY !== 'есть' ? 'Нет GEMINI_API_KEY в Vercel'
-    : okModel ? 'Всё работает' : 'Google не ответил ни одной моделью — смотри «модели»';
+    : !process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY ? 'Нет ни GEMINI_API_KEY, ни GROQ_API_KEY в Vercel'
+    : okModel ? 'ИИ на сервере работает' : 'Ни одна модель не ответила — смотри «модели»';
   lastCheck = Date.now(); lastResult = out;
   return out;
+}
+
+// ---------- запасной ИИ: Groq (как в JOL-Bilim) ----------
+// Включается, если в Vercel задан GROQ_API_KEY. Бесплатный и очень быстрый.
+const GROQ_MODELS = (process.env.GROQ_MODEL ? [process.env.GROQ_MODEL] : []).concat(['openai/gpt-oss-120b', 'llama-3.3-70b-versatile']);
+
+async function callGroq(model, system, contents) {
+  const messages = [{ role: 'system', content: system }]
+    .concat(contents.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.parts[0].text })));
+  const body = { model, messages, temperature: 0.4, max_tokens: 1500 };
+  if (model.startsWith('openai/gpt-oss')) body.reasoning_effort = 'low';      // меньше «раздумий» — быстрее ответ
+  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    signal: AbortSignal.timeout(12000),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${String(process.env.GROQ_API_KEY).trim()}` },
+    body: JSON.stringify(body)
+  });
+  const j = await r.json().catch(() => null);
+  if (!r.ok) { const e = new Error((j && j.error && j.error.message) || `HTTP ${r.status}`); e.status = r.status; throw e; }
+  const text = String((j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '').trim();
+  if (!text) { const e = new Error('пустой ответ'); e.status = 502; throw e; }
+  return text;
+}
+
+// Все, кто может ответить, по порядку: сначала Gemini, потом Groq
+function providers() {
+  const list = MODELS.map(m => ({ name: m, run: (sys, msgs) => callGemini(m, sys, msgs) }));
+  if (process.env.GROQ_API_KEY) list.push(...GROQ_MODELS.map(m => ({ name: 'groq: ' + m, run: (sys, msgs) => callGroq(m, sys, msgs) })));
+  return list;
+}
+
+// от какого бота токен на сервере — пригодится, чтобы объяснить ошибку подписи
+let botName = null;
+async function serverBot() {
+  if (botName) return botName;
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${String(process.env.BOT_TOKEN || '').trim()}/getMe`, { signal: AbortSignal.timeout(5000) });
+    const j = await r.json();
+    if (j.ok) botName = '@' + j.result.username;
+  } catch (e) {}
+  return botName;
 }
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'GET' && req.query && req.query.check) return res.status(200).json(await check());
   if (req.method !== 'POST') return res.status(405).json({ error: 'только POST' });
-  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'на сервере не задан GEMINI_API_KEY' });
+  if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) return res.status(500).json({ error: 'на сервере не задан ни GEMINI_API_KEY, ни GROQ_API_KEY' });
 
   const raw = req.headers['x-init-data'];
   const who = inspect(Array.isArray(raw) ? raw[0] : raw || '');
-  if (!who.user) return res.status(401).json({ error: who.why });
+  if (!who.user) {
+    let why = who.why;
+    if (/подпись не сошлась/.test(why)) {
+      const b = await serverBot();
+      if (b) why = `подпись не сошлась: в Vercel стоит токен бота ${b}, а приложение открыто из другого бота. Поставь в BOT_TOKEN токен того бота, из которого открываешь.`;
+    }
+    return res.status(401).json({ error: why });
+  }
   if (ALLOWED.length && !ALLOWED.includes(who.user.id)) return res.status(403).json({ error: 'этот помощник только для своих' });
   if (tooOften(who.user.id)) return res.status(429).json({ error: 'много вопросов подряд — передохните пару минут' });
 
@@ -167,15 +223,19 @@ export default async function handler(req, res) {
   while (msgs.length && msgs[0].role !== 'user') msgs.shift();   // разговор должен начинаться с вопроса
 
   const system = systemPrompt(lang, ctx);
+  // Модель, которая ответила последней, пробуем первой: если основная перегружена,
+  // не будем каждый раз ждать её отказа.
+  const all = providers();
+  const order = good && Date.now() - good.at < 10 * 60 * 1000
+    ? [...all.filter(p => p.name === good.name), ...all.filter(p => p.name !== good.name)] : all;
   let last = null;
-  for (const model of MODELS) {
+  for (const p of order) {
     try {
-      const text = await callGemini(model, system, msgs);
-      return res.status(200).json({ text, model });
+      const text = await p.run(system, msgs);
+      good = { name: p.name, at: Date.now() };
+      return res.status(200).json({ text, model: p.name });
     } catch (e) {
-      last = e;
-      // модель не найдена или нет доступа — пробуем следующую; остальное — сразу отвечаем
-      if (![400, 403, 404].includes(e.status)) break;
+      last = e;          // перегружена, лимит, нет модели, не успела — пробуем следующую
     }
   }
   const status = last && last.status === 429 ? 429 : 502;

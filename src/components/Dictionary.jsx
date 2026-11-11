@@ -1,9 +1,10 @@
 // Словарь: темы, поиск, «мои слова» и карточки для заучивания.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { THEMES, ALL_WORDS, GENDER } from '../data/dictionary';
 import { t } from '../lib/i18n';
 import { haptic } from '../lib/tg';
 import { Say } from './Bits';
+import { preload } from '../lib/speak';
 
 const norm = s => String(s || '').toLowerCase().replace(/ё/g, 'е').trim();
 
@@ -96,6 +97,7 @@ export function Cards({ words, lang, known, setKnown, onDone }) {
   const [i, setI] = useState(0);
   const [show, setShow] = useState(false);
   const w = queue[i];
+  useEffect(() => { preload(queue.slice(i, i + 2).map(x => x.ru)); }, [i, queue]);
 
   if (!w) return (
     <div className="cards-end">

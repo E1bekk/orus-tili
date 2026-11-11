@@ -1,9 +1,10 @@
 // Уроки: список тем по разделам, страница темы и упражнение.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SECTIONS } from '../data/topics';
 import { t } from '../lib/i18n';
 import { haptic } from '../lib/tg';
 import { Say } from './Bits';
+import { preload } from '../lib/speak';
 
 export function LessonList({ lang, done, onOpen }) {
   return (
@@ -139,6 +140,11 @@ function Quiz({ topic, lang, onFinish }) {
 }
 
 export function LessonPage({ topic, lang, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(() => preload(topic.blocks.flatMap(b =>
+      b.type === 'examples' ? b.items.map(e => e.ru) : b.type === 'dialog' ? b.lines.map(l => l.ru) : [])), 600);
+    return () => clearTimeout(t);
+  }, [topic.id]);
   return (
     <article className="lesson">
       <div className="lesson-head">
