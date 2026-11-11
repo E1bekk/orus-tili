@@ -25,6 +25,8 @@
 
   --g-m: #7c8cff; --g-f: #f472b6; --g-n: #5ee08f; --g-pl: #ff9a5c;
   --safe-b: env(safe-area-inset-bottom, 0px);
+  /* во весь экран Telegram рисует свои кнопки сверху — отступаем под них */
+  --safe-t: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
   color-scheme: dark;
 }
 
@@ -49,7 +51,7 @@ p { margin: 0; }
 main { padding: 0 16px; max-width: 640px; margin: 0 auto; }
 
 /* ---------- шапка ---------- */
-.top { position: sticky; top: 0; z-index: 10; display: grid; gap: 12px; padding: 14px 16px; background: rgba(7, 11, 29, .82); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-bottom: 1px solid var(--line); }
+.top { position: sticky; top: 0; z-index: 10; display: grid; gap: 12px; padding: calc(14px + var(--safe-t)) 16px 14px; background: rgba(7, 11, 29, .82); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-bottom: 1px solid var(--line); }
 .top-row { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; max-width: 640px; width: 100%; margin: 0 auto; }
 .top h1 { grid-column: 2; margin: 0; text-align: center; font-size: 20px; line-height: 1.25; font-weight: 650; letter-spacing: -.01em; }
 .back { grid-column: 1; grid-row: 1; width: 44px; height: 44px; border-radius: 50%; font-size: 28px; line-height: 1; display: grid; place-items: center; padding-bottom: 3px; background: var(--glass-2); border: 1px solid var(--line); }
@@ -188,7 +190,7 @@ main { padding: 0 16px; max-width: 640px; margin: 0 auto; }
 .askbar button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 608px; margin: 0 auto; min-height: 58px; border-radius: 99px; font-size: 19px; font-weight: 700; color: #fff; background: var(--grad-ask); box-shadow: 0 10px 30px rgba(241, 90, 168, .35); }
 
 /* ---------- ИИ-чат ---------- */
-.ask { display: flex; flex-direction: column; height: calc(100vh - 136px); height: calc(100dvh - 136px); }
+.ask { display: flex; flex-direction: column; height: calc(100vh - 136px - var(--safe-t)); height: calc(100dvh - 136px - var(--safe-t)); }
 .ask-ctx { margin: 12px 0 0; padding: 9px 14px; border-radius: 99px; font-size: 15px; font-weight: 600; color: #fff; background: linear-gradient(100deg, rgba(255, 122, 61, .3), rgba(124, 140, 255, .25)); align-self: flex-start; }
 .ask-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 14px 0; }
 .msg { max-width: 88%; padding: 12px 16px; border-radius: 22px; font-size: 18px; line-height: 1.5; }
@@ -221,3 +223,8 @@ main { padding: 0 16px; max-width: 640px; margin: 0 auto; }
 .line.me .who { order: 2; color: #0b1030; background: var(--lime); font-size: 11px; }
 .line.me .bubble { order: 1; border-radius: 18px; border-top-right-radius: 6px; background: linear-gradient(140deg, rgba(111, 125, 255, .35), rgba(48, 54, 168, .35)); border-color: rgba(124, 140, 255, .35); }
 .sec h2 em { font-style: normal; float: right; color: var(--dim); letter-spacing: .04em; }
+.ask-err small { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); word-break: break-word; }
+
+/* кнопка звука: грузится — мигает, играет — светится */
+.say.load { animation: blink 1s infinite; }
+.say.play { background: rgba(198, 244, 50, .18); }

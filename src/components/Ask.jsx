@@ -42,7 +42,8 @@ export function Ask({ lang, context }) {
       const a = await askAI({ history: history.slice(-10), lang, context });
       setMsgs(h => h.concat({ role: 'ai', text: a }));
     } catch (e) {
-      setErr(inTelegram ? t('aiError', lang) : t('aiOnlyTg', lang));
+      // общая фраза + точная причина мелким шрифтом — по ней видно, что чинить
+      setErr((inTelegram ? t('aiError', lang) : t('aiOnlyTg', lang)) + (e && e.message ? '\n' + e.message : ''));
     } finally { setBusy(false); }
   };
 
@@ -67,7 +68,7 @@ export function Ask({ lang, context }) {
         <div className="msg ai"><Rich text={t('aiHello', lang)} /></div>
         {msgs.map((m, i) => <div key={i} className={'msg ' + m.role}><Rich text={m.text} /></div>)}
         {busy && <div className="msg ai thinking"><span /><span /><span /> {t('aiThink', lang)}</div>}
-        {err && <p className="ask-err">{err}</p>}
+        {err && <p className="ask-err">{err.split('\n')[0]}{err.includes('\n') && <small>{err.split('\n').slice(1).join(' ')}</small>}</p>}
         <div ref={end} />
       </div>
       <div className="chips">

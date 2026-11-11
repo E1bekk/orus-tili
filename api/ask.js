@@ -111,8 +111,39 @@ async function callGemini(model, system, contents) {
   return text;
 }
 
+// Проверка настроек: открыть в браузере /api/ask?check=1.
+// Ключи не показывает — только «есть / нет» и что ответил Google.
+let lastCheck = 0, lastResult = null;
+async function check() {
+  if (Date.now() - lastCheck < 20000 && lastResult) return lastResult;   // не чаще раза в 20 секунд
+  const out = {
+    BOT_TOKEN: process.env.BOT_TOKEN ? (/^\d{6,12}:[A-Za-z0-9_-]{30,}$/.test(String(process.env.BOT_TOKEN).trim()) ? 'есть' : 'есть, но не похож на токен бота') : 'НЕТ',
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY ? 'есть' : 'НЕТ',
+    ALLOWED_IDS: ALLOWED.length ? `${ALLOWED.length} номер(а)` : 'не задано — пускаем всех из Telegram',
+    модели: {}
+  };
+  if (process.env.GEMINI_API_KEY) {
+    for (const m of MODELS) {
+      try {
+        const text = await callGemini(m, 'Отвечай одним словом.', [{ role: 'user', parts: [{ text: 'Скажи по-русски: привет' }] }]);
+        out.модели[m] = 'работает: ' + text.slice(0, 40);
+        break;                                     // первая рабочая найдена — остальные не трогаем
+      } catch (e) {
+        out.модели[m] = `ошибка ${e.status || ''}: ${String(e.message).slice(0, 160)}`;
+      }
+    }
+  }
+  const okModel = Object.values(out.модели).some(v => v.startsWith('работает'));
+  out.итог = out.BOT_TOKEN !== 'есть' ? 'Проблема с BOT_TOKEN'
+    : out.GEMINI_API_KEY !== 'есть' ? 'Нет GEMINI_API_KEY в Vercel'
+    : okModel ? 'Всё работает' : 'Google не ответил ни одной моделью — смотри «модели»';
+  lastCheck = Date.now(); lastResult = out;
+  return out;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
+  if (req.method === 'GET' && req.query && req.query.check) return res.status(200).json(await check());
   if (req.method !== 'POST') return res.status(405).json({ error: 'только POST' });
   if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'на сервере не задан GEMINI_API_KEY' });
 

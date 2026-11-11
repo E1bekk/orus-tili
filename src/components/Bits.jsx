@@ -1,5 +1,6 @@
 // Мелкие общие детали интерфейса.
-import { canSpeak, speak } from '../lib/speak';
+import { useState } from 'react';
+import { speak } from '../lib/speak';
 import { t } from '../lib/i18n';
 
 export function LangToggle({ lang, setLang }) {
@@ -23,11 +24,12 @@ export function Header({ title, lang, setLang, onBack }) {
   );
 }
 
-// кнопка «послушать» — только если телефон умеет говорить
+// кнопка «послушать»: пока звук грузится — мигает, пока играет — подсвечена
 export function Say({ text, lang }) {
-  if (!canSpeak()) return null;
+  const [st, setSt] = useState('idle');
   return (
-    <button className="say" onClick={e => { e.stopPropagation(); speak(text); }} aria-label={t('listen', lang)} title={t('listen', lang)}>🔊</button>
+    <button className={'say ' + st} onClick={e => { e.stopPropagation(); speak(text, setSt); }}
+      aria-label={t('listen', lang)} title={t('listen', lang)}>🔊</button>
   );
 }
 

@@ -1,1 +1,1 @@
-{ "functions": { "api/ask.js": { "maxDuration": 30 } } }
+{ "functions": { "api/ask.js": { "maxDuration": 30 }, "api/say.js": { "maxDuration": 60 } } }

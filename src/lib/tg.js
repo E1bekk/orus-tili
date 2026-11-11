@@ -9,6 +9,9 @@ export function initTelegram() {
     tg.ready();
     tg.expand();
     if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+    // на телефоне — во весь экран, без шапки Telegram (как в Scroll)
+    const phone = tg.platform === 'ios' || tg.platform === 'android';
+    if (phone && tg.requestFullscreen && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && !tg.isFullscreen) tg.requestFullscreen();
     // тёмно-синяя тема всегда — шапка Telegram в тон приложению
     if (tg.setHeaderColor) tg.setHeaderColor('#070b1d');
     if (tg.setBackgroundColor) tg.setBackgroundColor('#070b1d');
