@@ -3,12 +3,14 @@
 // Озвучиваем только то, что есть в приложении, — чужой текст сюда не пролезет.
 import { TOPICS } from '../src/data/topics.js';
 import { ALL_WORDS } from '../src/data/dictionary.js';
+import { TEST_PHRASES } from '../src/data/tests.js';
 
 const VOICE = process.env.TTS_VOICE || 'Kore';            // ровный, чёткий голос
 const norm = s => String(s || '').replace(/[()«»]/g, '').replace(/\s+/g, ' ').trim().slice(0, 200);
 
 // все русские фразы приложения: слова словаря, примеры и диалоги уроков
 const ALLOWED = new Set(ALL_WORDS.map(w => norm(w.ru)));
+TEST_PHRASES.forEach(t => ALLOWED.add(norm(t)));
 for (const tp of TOPICS) for (const b of tp.blocks) {
   if (b.type === 'examples') b.items.forEach(e => ALLOWED.add(norm(e.ru)));
   if (b.type === 'dialog') b.lines.forEach(l => ALLOWED.add(norm(l.ru)));
@@ -29,7 +31,7 @@ function toWav(buf) {
 const API = 'https://generativelanguage.googleapis.com/v1beta';
 async function post(url, body) {
   const r = await fetch(url, {
-    method: 'POST', signal: AbortSignal.timeout(20000),
+    method: 'POST', signal: AbortSignal.timeout(15000),
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
     body: JSON.stringify(body)
   });
@@ -79,8 +81,7 @@ async function synth(text) {
   for (const w of order) {
     try { const buf = await w.run(text); working = w; return { wav: toWav(buf), tried }; }
     catch (e) {
-      tried.push(`${w.name}: ${e.status || ''} ${String(e.message).slice(0, 140)}`);
-      if (e.status === 429) break;                 // лимит — дальше пробовать бессмысленно
+      tried.push(`${w.name}: ${e.status || ''} ${String(e.message).slice(0, 140)}`);   // пробуем следующий способ
     }
   }
   const err = new Error('не получилось озвучить'); err.tried = tried; throw err;

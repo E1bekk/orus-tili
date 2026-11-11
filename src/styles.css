@@ -253,3 +253,50 @@ main { padding: 0 16px; max-width: 640px; margin: 0 auto; }
 /* в строке слова — место под новую кнопку */
 .word-main { grid-template-columns: 1fr auto auto; gap: 6px; }
 .wod-row .say, .cards-say .say { margin-left: 4px; }
+
+/* ---------- тесты ---------- */
+.t-test { background: linear-gradient(150deg, #2ed3b7 0%, #128a8f 45%, #0d2f52 100%); }
+.tests-intro { font-size: 17px; color: var(--muted); padding: 0 4px; }
+.test-row .row-ic { background: linear-gradient(150deg, rgba(46, 211, 183, .35), rgba(124, 140, 255, .25)); }
+.best { min-width: 52px; padding: 4px 10px; border-radius: 99px; text-align: center; font-weight: 700; font-size: 15px; color: #08240f; background: var(--ok); }
+.theme-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-t { padding: 10px 14px; border-radius: 99px; font-size: 16px; font-weight: 600; color: #fff; background: var(--glass-2); border: 1px solid var(--line); }
+.chip-t.on { color: #0b1030; background: #c6f432; border-color: transparent; }
+.test-top { display: flex; justify-content: space-between; font-size: 15px; font-weight: 600; color: var(--muted); padding: 0 4px; }
+.test-bar { height: 8px; border-radius: 99px; background: var(--glass-2); overflow: hidden; }
+.test-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2ed3b7, #c6f432); transition: width .3s; }
+.test-card { background: linear-gradient(160deg, #1d8f8a 0%, #1b3f7a 55%, #151a4d 100%); }
+.ask-word { display: grid; gap: 6px; justify-items: start; }
+.ask-word small { font-size: 15px; color: rgba(255, 255, 255, .8); }
+.ask-word > b { font-size: 28px; line-height: 1.25; font-weight: 700; }
+.ask-word .ex-ru { width: 100%; font-size: 22px; }
+.ky-big { font-size: 24px !important; }
+.hint { font-size: 16px; color: rgba(255, 255, 255, .75); }
+.link { justify-self: start; padding: 4px 0; font-size: 15px; font-weight: 600; color: #c6f432; background: none; text-align: left; }
+.wide-c { width: 100%; }
+.btn:disabled { opacity: .45; }
+.listen { display: grid; justify-items: center; gap: 10px; padding: 6px 0; }
+.listen-btn { display: grid; justify-items: center; gap: 6px; width: 100%; padding: 18px; border-radius: 24px; color: #fff; background: rgba(10, 6, 28, .35); border: 1.5px dashed rgba(255, 255, 255, .35); }
+.listen-btn span { width: 76px; height: 76px; display: grid; place-items: center; border-radius: 50%; font-size: 32px; background: linear-gradient(150deg, #2ed3b7, #7c8cff); box-shadow: 0 10px 30px rgba(46, 211, 183, .35); transition: transform .15s; }
+.listen-btn:active span { transform: scale(.9); }
+.listen-btn.play span { animation: pulse 1s infinite; }
+.listen-btn small { font-size: 15px; color: rgba(255, 255, 255, .8); }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(46, 211, 183, .55); } 50% { box-shadow: 0 0 0 16px rgba(46, 211, 183, 0); } }
+.listen-word { font-size: 24px; font-weight: 700; }
+.build-line { display: flex; flex-wrap: wrap; gap: 8px; min-height: 64px; padding: 10px; border-radius: 18px; background: rgba(10, 6, 28, .4); border: 1.5px solid rgba(255, 255, 255, .2); }
+.build-line.ok { border-color: var(--ok); }
+.build-line.no { border-color: var(--no); }
+.build-ph { align-self: center; font-size: 15px; color: rgba(255, 255, 255, .6); }
+.tiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.wtile { min-height: 46px; padding: 8px 14px; border-radius: 14px; font-size: 19px; font-weight: 600; color: #0b1030; background: #fff; box-shadow: 0 3px 0 rgba(0, 0, 0, .25); transition: transform .1s; }
+.wtile:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
+.wtile.on { background: #c6f432; }
+.wtile.gone { opacity: .18; box-shadow: none; }
+.fill-s { font-size: 22px; line-height: 1.9; font-weight: 600; }
+.fill-in { display: inline-block; max-width: 100%; margin: 0 4px; padding: 2px 8px; border: 0; border-bottom: 3px solid #c6f432; border-radius: 10px 10px 4px 4px; font: inherit; color: #fff; background: rgba(10, 6, 28, .45); outline: none; }
+.fill-in.ok { border-color: var(--ok); color: var(--ok); }
+.fill-in.no { border-color: var(--no); color: #ffb4a3; }
+.fill-ky { font-size: 16px; color: rgba(255, 255, 255, .75); }
+.answer-in { width: 100%; padding: 12px 14px; border-radius: 18px; font: inherit; font-size: 19px; color: #fff; background: rgba(10, 6, 28, .45); border: 1.5px solid rgba(255, 255, 255, .25); resize: none; outline: none; }
+.answer-in:focus { border-color: #c6f432; }
+.ai-fb p { font-size: 17px; }

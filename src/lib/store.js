@@ -10,11 +10,13 @@ export function useStore() {
   const [done, setDone] = useState([]);      // пройденные темы
   const [saved, setSaved] = useState([]);    // «мои слова»
   const [known, setKnown] = useState([]);    // выученные карточками
+  const [best, setBest] = useState({});      // лучшие результаты тестов, %
 
   useEffect(() => {
-    Promise.all([load('lang'), loadList('done'), loadList('saved'), loadList('known')]).then(([l, d, s, k]) => {
+    Promise.all([load('lang'), loadList('done'), loadList('saved'), loadList('known'), load('best')]).then(([l, d, s, k, b]) => {
       if (l === 'ru' || l === 'ky') setLangState(l);
       setDone(d); setSaved(s); setKnown(k);
+      try { const o = JSON.parse(b || '{}'); if (o && typeof o === 'object') setBest(o); } catch (e) {}
       setReady(true);
     });
   }, []);
@@ -38,5 +40,10 @@ export function useStore() {
     saveList('known', n); return n;
   }), []);
 
-  return { ready, lang, setLang, done, markDone, saved, toggleSaved, known, setKnownWord };
+  const setScore = useCallback((mode, pct) => setBest(p => {
+    if (p[mode] != null && p[mode] >= pct) return p;
+    const n = { ...p, [mode]: pct }; save('best', JSON.stringify(n)); return n;
+  }), []);
+
+  return { best, setScore, ready, lang, setLang, done, markDone, saved, toggleSaved, known, setKnownWord };
 }

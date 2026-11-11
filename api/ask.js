@@ -6,7 +6,7 @@ import { topicById } from '../src/data/topics.js';
 const MAX_AGE = 24 * 3600;
 // Свежие модели — первыми. Если какая-то недоступна, пробуем следующую.
 const MODELS = (process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : [])
-  .concat(['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash']);
+  .concat(['gemini-3.8-flash', 'gemini-3.5-flash-lite']);
 
 // ---------- кто пришёл ----------
 function inspect(initData, token = String(process.env.BOT_TOKEN || '').trim()) {
@@ -69,6 +69,12 @@ function systemPrompt(lang, ctx) {
   let about = '';
   if (ctx && ctx.kind === 'topic') about = '\n\nСейчас она открыла урок. Вот его содержание, опирайся на него:\n' + topicText(ctx.id);
   if (ctx && ctx.kind === 'word') about = `\n\nСейчас она смотрит слово «${String(ctx.ru).slice(0, 60)}» (по-кыргызски: ${String(ctx.ky || '').slice(0, 60)}). Если вопрос про него — покажи, как его использовать, в каком роде, как меняется, с примерами из жизни.`;
+  if (ctx && ctx.kind === 'answer') about = `\n\nСЕЙЧАС ТЕСТ. Ей задали вопрос по-русски: «${String(ctx.question).slice(0, 200)}». Её сообщение — это её ответ на этот вопрос. Проверь его строго по формату:
+1-я строка: «✅ Правильно!» если ответ понятный и без ошибок; «🟡 Почти!» если смысл верный, но есть ошибки; «❌ Не совсем.» если ответ не по вопросу или непонятный. Эту строку пиши всегда по-русски, первым символом — значок.
+2-я строка: «Правильно: …» — её же ответ, но исправленный (сохрани её мысль и её слова, не придумывай другой ответ). Если ошибок нет — пропусти эту строку.
+Потом 1–2 коротких строки: какая ошибка и почему так (род, окончание, падеж, время), с переводом на кыргызский, если объясняешь по-русски.
+Если ответ не по вопросу — мягко покажи пример хорошего ответа.
+В конце — одна короткая похвала. Не больше 70 слов. Не задавай вопросов.`;
   if (ctx && ctx.kind === 'theme') about = `\n\nСейчас она открыла раздел словаря «${String(ctx.title).slice(0, 60)}».`;
 
   return `Ты — добрый и терпеливый учитель русского языка. Твоя ученица — взрослая женщина, её родной язык кыргызский. Она уже немного говорит по-русски, но путается в формах: род (он/она/оно), окончания, падежи, где/куда, вид глагола (делать/сделать), глаголы движения (идти/ехать), прошедшее время женского рода (я была, я пошла).
@@ -118,7 +124,7 @@ let good = null;            // какая модель ответила посл
 async function check() {
   if (Date.now() - lastCheck < 20000 && lastResult) return lastResult;   // не чаще раза в 20 секунд
   const out = {
-    версия: 'Gemini + Groq, 3',
+    версия: 'Gemini + Groq параллельно, 4',
     BOT_TOKEN: process.env.BOT_TOKEN ? (/^\d{6,12}:[A-Za-z0-9_-]{30,}$/.test(String(process.env.BOT_TOKEN).trim()) ? 'есть' : 'есть, но не похож на токен бота') : 'НЕТ',
     GEMINI_API_KEY: process.env.GEMINI_API_KEY ? 'есть' : 'нет',
     GROQ_API_KEY: process.env.GROQ_API_KEY ? 'есть (запасной ИИ)' : 'нет — запасного ИИ нет',
@@ -133,14 +139,15 @@ async function check() {
       out.бот = j.ok ? '@' + j.result.username + ' — приложение должно открываться именно из этого бота' : 'Telegram не признал токен: ' + (j.description || r.status);
     } catch (e) { out.бот = 'не удалось спросить Telegram'; }
   }
-  for (const p of providers()) {
+  await Promise.all(providers().map(async p => {
+    const t0 = Date.now();
     try {
       const text = await p.run('Отвечай одним словом.', [{ role: 'user', parts: [{ text: 'Скажи по-русски: привет' }] }]);
-      out.модели[p.name] = 'работает: ' + text.slice(0, 40);
+      out.модели[p.name] = `работает за ${((Date.now() - t0) / 1000).toFixed(1)} с: ${text.slice(0, 30)}`;
     } catch (e) {
-      out.модели[p.name] = `ошибка ${e.status || ''}: ${String(e.message).slice(0, 160)}`;
+      out.модели[p.name] = `ошибка ${e.status || ''}: ${String(e.message).slice(0, 140)}`;
     }
-  }
+  }));
   const okModel = Object.values(out.модели).some(v => v.startsWith('работает'));
   out.итог = out.BOT_TOKEN !== 'есть' ? 'Проблема с BOT_TOKEN'
     : !process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY ? 'Нет ни GEMINI_API_KEY, ни GROQ_API_KEY в Vercel'
@@ -151,7 +158,7 @@ async function check() {
 
 // ---------- запасной ИИ: Groq (как в JOL-Bilim) ----------
 // Включается, если в Vercel задан GROQ_API_KEY. Бесплатный и очень быстрый.
-const GROQ_MODELS = (process.env.GROQ_MODEL ? [process.env.GROQ_MODEL] : []).concat(['openai/gpt-oss-120b', 'llama-3.3-70b-versatile']);
+const GROQ_MODELS = (process.env.GROQ_MODEL ? [process.env.GROQ_MODEL] : []).concat(['openai/gpt-oss-120b', 'openai/gpt-oss-20b']);
 
 async function callGroq(model, system, contents) {
   const messages = [{ role: 'system', content: system }]
@@ -173,9 +180,32 @@ async function callGroq(model, system, contents) {
 
 // Все, кто может ответить, по порядку: сначала Gemini, потом Groq
 function providers() {
-  const list = MODELS.map(m => ({ name: m, run: (sys, msgs) => callGemini(m, sys, msgs) }));
-  if (process.env.GROQ_API_KEY) list.push(...GROQ_MODELS.map(m => ({ name: 'groq: ' + m, run: (sys, msgs) => callGroq(m, sys, msgs) })));
-  return list;
+  const g = process.env.GEMINI_API_KEY ? MODELS.map(m => ({ name: m, run: (sys, msgs) => callGemini(m, sys, msgs) })) : [];
+  const q = process.env.GROQ_API_KEY ? GROQ_MODELS.map(m => ({ name: 'groq: ' + m, run: (sys, msgs) => callGroq(m, sys, msgs) })) : [];
+  const list = [];
+  for (let i = 0; i < Math.max(g.length, q.length); i++) { if (g[i]) list.push(g[i]); if (q[i]) list.push(q[i]); }
+  return list;              // gemini-3.8 → groq-120b → gemini-lite → groq-20b
+}
+
+// Не ждём по очереди: запускаем первого, и если за 4 секунды нет ответа —
+// подключаем следующего. Кто первым ответил — того и берём. Упал — сразу следующий.
+const STAGGER = 4000;
+function race(order, system, msgs) {
+  return new Promise((resolve, reject) => {
+    let i = 0, running = 0, done = false, timer = null, lastErr = null;
+    const launch = () => {
+      if (done) return;
+      if (i >= order.length) { if (!running) { done = true; reject(lastErr || new Error('никто не ответил')); } return; }
+      const p = order[i++]; running++;
+      clearTimeout(timer);
+      timer = setTimeout(launch, STAGGER);
+      p.run(system, msgs).then(
+        text => { if (done) return; done = true; clearTimeout(timer); resolve({ text, name: p.name }); },
+        e => { running--; lastErr = e; launch(); }
+      );
+    };
+    launch();
+  });
 }
 
 // от какого бота токен на сервере — пригодится, чтобы объяснить ошибку подписи
@@ -229,15 +259,11 @@ export default async function handler(req, res) {
   const order = good && Date.now() - good.at < 10 * 60 * 1000
     ? [...all.filter(p => p.name === good.name), ...all.filter(p => p.name !== good.name)] : all;
   let last = null;
-  for (const p of order) {
-    try {
-      const text = await p.run(system, msgs);
-      good = { name: p.name, at: Date.now() };
-      return res.status(200).json({ text, model: p.name });
-    } catch (e) {
-      last = e;          // перегружена, лимит, нет модели, не успела — пробуем следующую
-    }
-  }
+  try {
+    const won = await race(order, system, msgs);
+    good = { name: won.name, at: Date.now() };
+    return res.status(200).json({ text: won.text, model: won.name });
+  } catch (e) { last = e; }
   const status = last && last.status === 429 ? 429 : 502;
   res.status(status).json({ error: status === 429 ? 'ИИ сейчас занят, попробуйте через минуту' : 'ИИ не ответил: ' + (last ? last.message : '') });
 }

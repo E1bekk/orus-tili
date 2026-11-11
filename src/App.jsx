@@ -8,6 +8,7 @@ import { Header, AskBar, Say } from './components/Bits';
 import { LessonList, LessonPage } from './components/Lessons';
 import { DictHome, WordList, Cards, themeById, savedWords } from './components/Dictionary';
 import { Ask } from './components/Ask';
+import { TestsHome, TestRun, MODES } from './components/Tests';
 
 // слово дня: каждый день новое, у всех одинаковое
 function wordOfDay() {
@@ -16,7 +17,8 @@ function wordOfDay() {
   return ALL_WORDS[(n * 7919) % ALL_WORDS.length];
 }
 
-function Home({ lang, done, known, go }) {
+function Home({ lang, done, known, best, go }) {
+  const tried = Object.keys(best).length;
   const w = wordOfDay();
   const name = userName();
   const g = w.g && GENDER[w.g];
@@ -32,6 +34,11 @@ function Home({ lang, done, known, go }) {
         <span className="tile-ic">📖</span>
         <span className="tile-txt"><b>{t('dict', lang)}</b><small>{t('dictSub', lang)}</small></span>
         <span className="tile-num">{known.length}/{ALL_WORDS.length}<small>{t('learned', lang)}</small></span>
+      </button>
+      <button className="tile t-test" onClick={() => go({ s: 'tests' })}>
+        <span className="tile-ic">🎯</span>
+        <span className="tile-txt"><b>{t('tests', lang)}</b><small>{t('testsSub', lang)}</small></span>
+        <span className="tile-num">{tried}/{MODES.length}<small>{lang === 'ky' ? 'аракет' : 'пройдено'}</small></span>
       </button>
       <button className="tile t-ask" onClick={() => go({ s: 'ask' })}>
         <span className="tile-ic">✨</span>
@@ -66,7 +73,7 @@ export default function App() {
   let title = t('appName', lang), body = null, ctx = null;
 
   if (cur.s === 'home') {
-    body = <Home lang={lang} done={st.done} known={st.known} go={go} />;
+    body = <Home lang={lang} done={st.done} known={st.known} best={st.best} go={go} />;
   } else if (cur.s === 'lessons') {
     title = t('learn', lang);
     body = <LessonList lang={lang} done={st.done} onOpen={id => go({ s: 'lesson', id })} />;
@@ -94,6 +101,13 @@ export default function App() {
     const th = cur.id !== 'saved' ? themeById(cur.id) : null;
     title = t('cards', lang);
     body = <Cards words={th ? th.words : savedWords(st.saved)} lang={lang} known={st.known} setKnown={st.setKnownWord} onDone={back} />;
+  } else if (cur.s === 'tests') {
+    title = t('tests', lang);
+    body = <TestsHome lang={lang} best={st.best} onStart={mode => go({ s: 'test', mode })} />;
+  } else if (cur.s === 'test') {
+    const m = MODES.find(x => x.id === cur.mode);
+    title = lang === 'ky' ? m.ky : m.ru;
+    body = <TestRun key={cur.mode} mode={cur.mode} lang={lang} onFinish={pct => st.setScore(cur.mode, pct)} onLesson={id => go({ s: 'lesson', id })} />;
   } else if (cur.s === 'ask') {
     title = t('ask', lang);
     body = <Ask lang={lang} context={cur.ctx || null} />;
